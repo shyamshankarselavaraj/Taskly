@@ -1,33 +1,71 @@
-# Gradle files
-.gradle/
-build/
+# React Native
+node_modules/
 
-# Local configuration file (sdk path, etc)
+# Build artifacts
+android/app/build/
+android/build/
+android/.gradle/
+android/.idea/
+android/.cxx/
+*.keystore
+*.jks
+
+# Local config
 local.properties
 
-# Log/OS Files
-*.log
-
-# Android Studio generated files and folders
-captures/
-.externalNativeBuild/
-.cxx/
-*.apk
-output.json
-
-# IntelliJ
+# IntelliJ / Android Studio
 *.iml
 .idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
+*.ipr
+*.iws
 
-# Keystore files
-*.jks
-*.keystore
+# Xcode
+ios/build/
+ios/Pods/
+ios/DerivedData/
+*.xcworkspace
+*.xcuserdata
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcuserdata/
+*.xcuserstate
 
-# Google Services (e.g. APIs or Firebase)
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+metro-debug.log*
+
+# Bundler
+.bundle
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Misc
+*.swp
+*~
+*.tmp
+
+# Generated files
+*.orig
+
+# Android Studio
+captures/
+.externalNativeBuild/
+output.json
+
+# Firebase
 google-services.json
 
-# Android Profiling
+# Profiling
 *.hprof

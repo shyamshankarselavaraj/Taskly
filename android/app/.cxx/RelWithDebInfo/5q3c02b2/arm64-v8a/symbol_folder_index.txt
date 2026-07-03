@@ -1,0 +1,1 @@
+E:\Projects\MyApp\android\app\build\intermediates\cxx\RelWithDebInfo\5q3c02b2\obj\arm64-v8a
