@@ -7,8 +7,10 @@ android/build/
 android/.gradle/
 android/.idea/
 android/.cxx/
+android/app/.cxx/
 *.keystore
 *.jks
+android/keystore.properties
 
 # Local config
 local.properties
