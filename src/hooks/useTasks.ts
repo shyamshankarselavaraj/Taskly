@@ -76,6 +76,11 @@ export function useTasks() {
     return tasks.filter(task => !task.completed && task.dueDate && task.dueDate <= today).length;
   }, [tasks]);
 
+  const notificationTasks = useMemo(() => {
+    const today = todayIso();
+    return tasks.filter(task => !task.completed && task.dueDate && task.dueDate <= today);
+  }, [tasks]);
+
   return {
     tasks,
     addTask,
@@ -87,6 +92,7 @@ export function useTasks() {
     userName,
     setUserName,
     notificationCount,
+    notificationTasks,
   };
 }
 

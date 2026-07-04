@@ -22,9 +22,10 @@ type HomeScreenProps = {
   setActiveTab: (tab: FilterTab) => void;
   userName: string;
   notificationCount: number;
+  notificationTasks: Task[];
 };
 
-export function HomeScreen({ tasks, addTask, updateTask, toggleComplete, removeTask, clearCompleted, counts, activeTab, setActiveTab, userName, notificationCount }: HomeScreenProps) {
+export function HomeScreen({ tasks, addTask, updateTask, toggleComplete, removeTask, clearCompleted, counts, activeTab, setActiveTab, userName, notificationCount, notificationTasks }: HomeScreenProps) {
   const { theme } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -70,7 +71,7 @@ export function HomeScreen({ tasks, addTask, updateTask, toggleComplete, removeT
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.bg }]}>
-      <Header name={userName} notificationCount={notificationCount} />
+      <Header name={userName} notificationCount={notificationCount} notificationTasks={notificationTasks} />
       <ProgressCard completed={completed} total={sortedTasks.length} remaining={remaining} />
       <FilterTabs activeTab={activeTab} onChange={setActiveTab} counts={counts} />
       <FlatList

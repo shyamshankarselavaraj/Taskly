@@ -9,7 +9,7 @@ import { useTasks } from './src/hooks/useTasks';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
 function AppShell() {
-  const { tasks, addTask, updateTask, toggleComplete, removeTask, clearCompleted, counts, userName, setUserName, notificationCount } = useTasks();
+  const { tasks, addTask, updateTask, toggleComplete, removeTask, clearCompleted, counts, userName, setUserName, notificationCount, notificationTasks } = useTasks();
   const { theme } = useTheme();
 
   return (
@@ -27,6 +27,7 @@ function AppShell() {
           userName={userName}
           setUserName={setUserName}
           notificationCount={notificationCount}
+          notificationTasks={notificationTasks}
         />
       </NavigationContainer>
     </SafeAreaView>

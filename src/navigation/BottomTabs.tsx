@@ -21,6 +21,7 @@ type BottomTabsProps = {
   userName: string;
   setUserName: (name: string) => void;
   notificationCount: number;
+  notificationTasks: Task[];
 };
 
 export function BottomTabs(props: BottomTabsProps) {

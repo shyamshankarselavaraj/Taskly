@@ -1,17 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { greetingText } from '../utils/date';
 import { useTheme } from '../theme/ThemeContext';
+import { NotificationPanel } from './NotificationPanel';
+import type { Task } from '../types/Task';
 
 type HeaderProps = {
   name?: string;
   notificationCount?: number;
+  notificationTasks?: Task[];
 };
 
-export function Header({ name = 'User', notificationCount = 0 }: HeaderProps) {
+export function Header({ name = 'User', notificationCount = 0, notificationTasks = [] }: HeaderProps) {
   const { theme } = useTheme();
   const avatarLetter = name.trim().charAt(0).toUpperCase() || 'U';
+  const [panelVisible, setPanelVisible] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+
+  const visibleNotifications = notificationTasks.filter(t => !dismissedIds.has(t.id));
+  const visibleCount = visibleNotifications.length;
+
+  const handleDismiss = (taskId: string) => {
+    setDismissedIds(prev => new Set([...prev, taskId]));
+  };
+
+  const handleClearAll = () => {
+    setDismissedIds(new Set(notificationTasks.map(t => t.id)));
+    setPanelVisible(false);
+  };
 
   return (
     <View style={styles.container}>
@@ -20,11 +37,14 @@ export function Header({ name = 'User', notificationCount = 0 }: HeaderProps) {
         <Text style={[styles.name, { color: theme.text }]}>{name}</Text>
       </View>
       <View style={styles.actions}>
-        <Pressable style={[styles.iconButton, { backgroundColor: theme.card }]}>
+        <Pressable
+          style={[styles.iconButton, { backgroundColor: theme.card }]}
+          onPress={() => setPanelVisible(true)}
+        >
           <Ionicons name="notifications-outline" size={20} color={theme.accent} />
-          {notificationCount > 0 && (
+          {visibleCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{notificationCount > 99 ? '99+' : notificationCount}</Text>
+              <Text style={styles.badgeText}>{visibleCount > 99 ? '99+' : visibleCount}</Text>
             </View>
           )}
         </Pressable>
@@ -32,6 +52,14 @@ export function Header({ name = 'User', notificationCount = 0 }: HeaderProps) {
           <Text style={styles.avatarText}>{avatarLetter}</Text>
         </View>
       </View>
+
+      <NotificationPanel
+        visible={panelVisible}
+        notifications={visibleNotifications}
+        onDismiss={handleDismiss}
+        onClearAll={handleClearAll}
+        onClose={() => setPanelVisible(false)}
+      />
     </View>
   );
 }
@@ -51,4 +79,5 @@ const styles = StyleSheet.create({
   avatar: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#ffffff', fontSize: 16, fontWeight: '800' },
 });
+
 
