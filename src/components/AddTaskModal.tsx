@@ -47,7 +47,7 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
       setTitle(initialTask.title);
       setDescription(initialTask.description ?? '');
       setDueDate(initialTask.dueDate);
-      setDueTime(initialTask.dueTime);
+      setDueTime(initialTask.dueDate ? initialTask.dueTime : undefined);
       setCategory(initialTask.category);
       setPriority(initialTask.priority);
       setReminder(initialTask.reminder ?? 0);
@@ -57,6 +57,7 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
   }, [visible, initialTask]);
 
   const canSave = useMemo(() => title.trim().length > 0, [title]);
+  const canSelectTime = Boolean(dueDate);
 
   const handleSave = () => {
     if (!canSave) return;
@@ -64,7 +65,7 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
       title: title.trim(),
       description: description.trim() || undefined,
       dueDate,
-      dueTime,
+      dueTime: dueDate ? dueTime : undefined,
       reminder,
       category,
       priority,
@@ -115,11 +116,19 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
             />
 
             <View style={styles.row}>
-              <Pressable style={styles.select} onPress={() => setShowDatePicker(true)}>
+              <Pressable testID="due-date-button" style={styles.select} onPress={() => setShowDatePicker(true)}>
                 <Text style={styles.label}>Due date</Text>
                 <Text style={styles.value}>{dueDate ?? 'Select date'}</Text>
               </Pressable>
-              <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
+              <Pressable
+                testID="due-time-button"
+                style={[styles.select, !canSelectTime && styles.disabled]}
+                onPress={() => {
+                  if (!canSelectTime) return;
+                  setShowTimePicker(true);
+                }}
+                disabled={!canSelectTime}
+              >
                 <Text style={styles.label}>Due time</Text>
                 <Text style={styles.value}>{dueTime ?? 'Select time'}</Text>
               </Pressable>
@@ -171,7 +180,7 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
             <Pressable style={styles.secondaryButton} onPress={handleClose}>
               <Text style={styles.secondaryText}>Cancel</Text>
             </Pressable>
-            <Pressable style={[styles.primaryButton, !canSave && styles.disabled]} onPress={handleSave} disabled={!canSave}>
+            <Pressable testID="save-task-button" style={[styles.primaryButton, !canSave && styles.disabled]} onPress={handleSave} disabled={!canSave}>
               <Text style={styles.primaryText}>Save Task</Text>
             </Pressable>
           </View>
