@@ -4,13 +4,28 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import type { Task } from '../types/Task';
 import { formatDueDate, formatDueTime } from '../utils/date';
 
-const categoryColors: Record<Task['category'], string> = {
+const categoryColors: Record<string, string> = {
   Work: '#7c3aed',
   Learning: '#16a34a',
   Personal: '#2563eb',
   Shopping: '#f59e0b',
   Health: '#ef4444',
 };
+
+function getCategoryColor(category: string) {
+  const predefined = categoryColors[category];
+  if (predefined) {
+    return predefined;
+  }
+
+  let hash = 0;
+  for (let index = 0; index < category.length; index += 1) {
+    hash = category.charCodeAt(index) + ((hash << 5) - hash);
+  }
+
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 70%, 45%)`;
+}
 
 const priorityColors: Record<Task['priority'], string> = {
   High: '#ef4444',
@@ -26,6 +41,8 @@ type TaskCardProps = {
 };
 
 export function TaskCard({ task, onToggle, onDelete, onPress }: TaskCardProps) {
+  const categoryColor = getCategoryColor(task.category);
+
   return (
     <Pressable onPress={() => onPress?.(task)} style={styles.card}>
       <View style={[styles.priorityStrip, { backgroundColor: priorityColors[task.priority] }]} />
@@ -48,8 +65,8 @@ export function TaskCard({ task, onToggle, onDelete, onPress }: TaskCardProps) {
               <Text style={styles.badgeText}>{formatDueTime(task.dueTime)}</Text>
             </View>
           ) : null}
-          <View style={[styles.badge, styles.categoryBadge, { borderColor: categoryColors[task.category] }]}> 
-            <Text style={[styles.badgeText, { color: categoryColors[task.category] }]}>{task.category}</Text>
+          <View style={[styles.badge, styles.categoryBadge, { borderColor: categoryColor }]}> 
+            <Text style={[styles.badgeText, { color: categoryColor }]}>{task.category}</Text>
           </View>
         </View>
       </View>

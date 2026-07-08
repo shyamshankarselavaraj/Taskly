@@ -14,6 +14,21 @@ const CATEGORY_COLORS: Record<string, string> = {
   Health: '#ef4444',
 };
 
+function getCategoryColor(category: string) {
+  const predefined = CATEGORY_COLORS[category];
+  if (predefined) {
+    return predefined;
+  }
+
+  let hash = 0;
+  for (let index = 0; index < category.length; index += 1) {
+    hash = category.charCodeAt(index) + ((hash << 5) - hash);
+  }
+
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 70%, 45%)`;
+}
+
 export function AnalyticsScreen({ tasks }: { tasks: Task[] }) {
   const { theme } = useTheme();
   const completed = tasks.filter(task => task.completed).length;
@@ -21,13 +36,21 @@ export function AnalyticsScreen({ tasks }: { tasks: Task[] }) {
   const overdue = tasks.filter(task => task.dueDate && task.dueDate < new Date().toISOString().split('T')[0] && !task.completed).length;
   const progress = tasks.length === 0 ? 0 : Math.round((completed / tasks.length) * 100);
 
-  const categoryData = Object.entries(CATEGORY_COLORS).map(([category, color]) => ({
-    name: category,
-    population: tasks.filter(task => task.category === category).length,
-    color,
-    legendFontColor: '#64748b',
-    legendFontSize: 12,
-  }));
+  const categoryCounts = tasks.reduce<Record<string, number>>((accumulator, task) => {
+    const name = task.category?.trim() || 'Uncategorized';
+    accumulator[name] = (accumulator[name] ?? 0) + 1;
+    return accumulator;
+  }, {});
+
+  const categoryData = Object.entries(categoryCounts)
+    .sort(([, countA], [, countB]) => countB - countA)
+    .map(([category, count]) => ({
+      name: category,
+      population: count,
+      color: getCategoryColor(category),
+      legendFontColor: '#64748b',
+      legendFontSize: 12,
+    }));
   const pieData = categoryData.filter(item => item.population > 0);
 
   return (
@@ -81,13 +104,17 @@ export function AnalyticsScreen({ tasks }: { tasks: Task[] }) {
 
       <View style={[styles.chartCard, { backgroundColor: theme.card }]}>
         <Text style={[styles.chartTitle, { color: theme.text }]}>Category details</Text>
-        {categoryData.map(item => (
-          <View key={item.name} style={styles.categoryRow}>
-            <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
-            <Text style={[styles.categoryName, { color: theme.text }]}>{item.name}</Text>
-            <Text style={styles.categoryCount}>{item.population} task{item.population !== 1 ? 's' : ''}</Text>
-          </View>
-        ))}
+        {categoryData.length === 0 ? (
+          <Text style={styles.empty}>No tasks with categories yet.</Text>
+        ) : (
+          categoryData.map(item => (
+            <View key={item.name} style={styles.categoryRow}>
+              <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
+              <Text style={[styles.categoryName, { color: theme.text }]}>{item.name}</Text>
+              <Text style={styles.categoryCount}>{item.population} task{item.population !== 1 ? 's' : ''}</Text>
+            </View>
+          ))
+        )}
       </View>
     </ScrollView>
   );

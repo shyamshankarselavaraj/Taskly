@@ -14,18 +14,50 @@ function createTaskId() {
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [userName, setUserNameState] = useState('User');
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    loadTasks().then(stored => setTasks(stored));
-    AsyncStorage.getItem(USER_NAME_KEY).then(name => {
-      if (name) setUserNameState(name);
-    });
+    let isMounted = true;
+
+    (async () => {
+      const [storedTasks, name] = await Promise.all([loadTasks(), AsyncStorage.getItem(USER_NAME_KEY)]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      // If a user action updated tasks before hydration finished, keep those edits.
+      setTasks(current => {
+        if (current.length === 0) {
+          return storedTasks;
+        }
+
+        const existingIds = new Set(current.map(task => task.id));
+        const missingStoredTasks = storedTasks.filter(task => !existingIds.has(task.id));
+        return [...current, ...missingStoredTasks];
+      });
+
+      if (name) {
+        setUserNameState(name);
+      }
+
+      setIsHydrated(true);
+    })();
+
     requestNotificationPermission();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
     saveTasks(tasks);
-  }, [tasks]);
+  }, [tasks, isHydrated]);
 
   const setUserName = (name: string) => {
     setUserNameState(name);

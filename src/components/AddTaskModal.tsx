@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { loadCustomCategories, saveCustomCategories } from '../storage/Storage';
 import type { Task, TaskCategory, TaskPriority, TaskReminder } from '../types/Task';
 import { todayIso } from '../utils/date';
 
@@ -24,6 +25,7 @@ const categories: TaskCategory[] = ['Work', 'Learning', 'Shopping', 'Health', 'P
 const priorities: TaskPriority[] = ['High', 'Medium', 'Low'];
 const reminders: Array<{ value: TaskReminder; label: string }> = [
   { value: 0, label: 'None' },
+  { value: -1, label: 'At due time' },
   { value: 5, label: '5 minutes before' },
   { value: 10, label: '10 minutes before' },
   { value: 30, label: '30 minutes before' },
@@ -31,16 +33,39 @@ const reminders: Array<{ value: TaskReminder; label: string }> = [
   { value: 1440, label: '1 day before' },
 ];
 
+function getCategoryColor(category: string) {
+  if (category === 'Work') return '#7c3aed';
+  if (category === 'Learning') return '#16a34a';
+  if (category === 'Personal') return '#2563eb';
+  if (category === 'Shopping') return '#f59e0b';
+  if (category === 'Health') return '#ef4444';
+
+  let hash = 0;
+  for (let index = 0; index < category.length; index += 1) {
+    hash = category.charCodeAt(index) + ((hash << 5) - hash);
+  }
+
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 70%, 45%)`;
+}
+
 export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState<string | undefined>(undefined);
   const [dueTime, setDueTime] = useState<string | undefined>(undefined);
   const [category, setCategory] = useState<TaskCategory>('Work');
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [customCategoryInput, setCustomCategoryInput] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('Medium');
   const [reminder, setReminder] = useState<TaskReminder>(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showReminderOptions, setShowReminderOptions] = useState(false);
+
+  useEffect(() => {
+    loadCustomCategories().then(stored => setCustomCategories(stored));
+  }, []);
 
   useEffect(() => {
     if (visible && initialTask) {
@@ -49,6 +74,19 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
       setDueDate(initialTask.dueDate);
       setDueTime(initialTask.dueTime);
       setCategory(initialTask.category);
+
+      if (!categories.includes(initialTask.category)) {
+        setCustomCategories(current => {
+          if (current.some(item => item.toLowerCase() === initialTask.category.toLowerCase())) {
+            return current;
+          }
+
+          const next = [...current, initialTask.category];
+          saveCustomCategories(next);
+          return next;
+        });
+      }
+
       setPriority(initialTask.priority);
       setReminder(initialTask.reminder ?? 0);
     } else if (!visible) {
@@ -57,6 +95,55 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
   }, [visible, initialTask]);
 
   const canSave = useMemo(() => title.trim().length > 0, [title]);
+  const canSelectTime = Boolean(dueDate);
+  const canSelectReminder = Boolean(dueDate && dueTime);
+  const selectedReminderLabel = useMemo(() => {
+    return reminders.find(item => item.value === reminder)?.label ?? 'None';
+  }, [reminder]);
+  const categoryOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+
+    [...categories, ...customCategories].forEach(item => {
+      const normalized = item.trim();
+      if (normalized.length === 0) {
+        return;
+      }
+
+      const key = normalized.toLowerCase();
+      if (!seen.has(key)) {
+        seen.set(key, normalized);
+      }
+    });
+
+    const current = category.trim();
+    if (current.length > 0) {
+      const key = current.toLowerCase();
+      if (!seen.has(key)) {
+        seen.set(key, current);
+      }
+    }
+
+    return Array.from(seen.values());
+  }, [category, customCategories]);
+
+  const addCustomCategory = () => {
+    const nextCategory = customCategoryInput.trim();
+    if (nextCategory.length === 0) {
+      return;
+    }
+
+    setCategory(nextCategory);
+    setCustomCategories(current => {
+      if (current.some(item => item.toLowerCase() === nextCategory.toLowerCase())) {
+        return current;
+      }
+
+      const next = [...current, nextCategory];
+      saveCustomCategories(next);
+      return next;
+    });
+    setCustomCategoryInput('');
+  };
 
   const handleSave = () => {
     if (!canSave) return;
@@ -64,8 +151,8 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
       title: title.trim(),
       description: description.trim() || undefined,
       dueDate,
-      dueTime,
-      reminder,
+      dueTime: dueDate ? dueTime : undefined,
+      reminder: dueDate && dueTime ? reminder : 0,
       category,
       priority,
     });
@@ -79,9 +166,18 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
     setDueDate(undefined);
     setDueTime(undefined);
     setCategory('Work');
+    setCustomCategoryInput('');
+    setShowReminderOptions(false);
     setPriority('Medium');
     setReminder(0);
   };
+
+  useEffect(() => {
+    if (!canSelectReminder) {
+      setReminder(0);
+      setShowReminderOptions(false);
+    }
+  }, [canSelectReminder]);
 
   const handleClose = () => {
     reset();
@@ -119,17 +215,80 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
                 <Text style={styles.label}>Due date</Text>
                 <Text style={styles.value}>{dueDate ?? 'Select date'}</Text>
               </Pressable>
-              <Pressable style={styles.select} onPress={() => setShowTimePicker(true)}>
-                <Text style={styles.label}>Due time</Text>
-                <Text style={styles.value}>{dueTime ?? 'Select time'}</Text>
-              </Pressable>
+              <View style={[styles.select, !canSelectReminder && styles.disabledSelect]}>
+                <Text style={styles.label}>Reminder</Text>
+                <Pressable
+                  style={styles.dropdownTrigger}
+                  onPress={() => {
+                    if (!canSelectReminder) {
+                      return;
+                    }
+                    setShowReminderOptions(current => !current);
+                  }}
+                  disabled={!canSelectReminder}
+                >
+                  <Text style={styles.value}>{selectedReminderLabel}</Text>
+                  <Ionicons name={showReminderOptions ? 'chevron-up' : 'chevron-down'} size={16} color="#64748b" />
+                </Pressable>
+                {showReminderOptions ? (
+                  <View style={styles.dropdownList}>
+                    {reminders.map(item => {
+                      const selected = reminder === item.value;
+                      return (
+                        <Pressable
+                          key={item.label}
+                          onPress={() => {
+                            setReminder(item.value);
+                            setShowReminderOptions(false);
+                          }}
+                          style={[styles.dropdownOption, selected && styles.dropdownOptionSelected]}
+                        >
+                          <Text style={[styles.optionText, selected && styles.dropdownOptionTextSelected]}>{item.label}</Text>
+                          {selected ? <Ionicons name="checkmark" size={16} color="#4338ca" /> : null}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+              </View>
             </View>
+
+            <Pressable
+              style={[styles.select, styles.timeSelect, !canSelectTime && styles.disabledSelect]}
+              onPress={() => {
+                if (!canSelectTime) {
+                  return;
+                }
+                setShowTimePicker(true);
+              }}
+              disabled={!canSelectTime}
+            >
+              <Text style={styles.label}>Due time</Text>
+              <Text style={[styles.value, !canSelectTime && styles.disabledValue]}>{dueTime ?? 'Select time'}</Text>
+            </Pressable>
 
               <View style={styles.row}>
               <View style={styles.selectGroup}>
                 <Text style={styles.label}>Category</Text>
-                {categories.map(item => {
-                  const color = item === 'Work' ? '#7c3aed' : item === 'Learning' ? '#16a34a' : item === 'Personal' ? '#2563eb' : item === 'Shopping' ? '#f59e0b' : '#ef4444';
+                <View style={styles.customCategoryRow}>
+                  <TextInput
+                    style={styles.customCategoryInput}
+                    placeholder="Add custom category"
+                    value={customCategoryInput}
+                    onChangeText={setCustomCategoryInput}
+                    onSubmitEditing={addCustomCategory}
+                    returnKeyType="done"
+                  />
+                  <Pressable
+                    onPress={addCustomCategory}
+                    style={[styles.addCategoryButton, customCategoryInput.trim().length === 0 && styles.disabled]}
+                    disabled={customCategoryInput.trim().length === 0}
+                  >
+                    <Text style={styles.addCategoryText}>Add</Text>
+                  </Pressable>
+                </View>
+                {categoryOptions.map(item => {
+                  const color = getCategoryColor(item);
                   const selected = category === item;
                   return (
                     <Pressable key={item} onPress={() => setCategory(item)} style={[styles.optionRow, selected && { backgroundColor: `${color}18`, borderRadius: 10 }]}>
@@ -156,15 +315,6 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
               </View>
             </View>
 
-            <View style={styles.selectGroup}>
-              <Text style={styles.label}>Reminder</Text>
-              {reminders.map(item => (
-                <Pressable key={item.label} onPress={() => setReminder(item.value)} style={styles.optionRow}>
-                  <Text style={styles.optionText}>{item.label}</Text>
-                  {reminder === item.value ? <Ionicons name="checkmark" size={16} color="#4338ca" /> : null}
-                </Pressable>
-              ))}
-            </View>
           </ScrollView>
 
           <View style={styles.footer}>
@@ -185,6 +335,9 @@ export function AddTaskModal({ visible, initialTask, onClose, onSave }: AddTaskM
                 setShowDatePicker(false);
                 if (selectedDate) {
                   setDueDate(selectedDate.toISOString().split('T')[0]);
+                } else {
+                  setDueDate(undefined);
+                  setDueTime(undefined);
                 }
               }}
             />
@@ -251,6 +404,35 @@ const styles = StyleSheet.create({
     minHeight: 90,
     textAlignVertical: 'top',
   },
+  customCategoryRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  customCategoryInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: '#0f172a',
+  },
+  addCategoryButton: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#4338ca',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addCategoryText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 12,
+  },
   row: {
     flexDirection: 'row',
     gap: 10,
@@ -263,6 +445,39 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  timeSelect: {
+    marginBottom: 12,
+  },
+  dropdownTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  dropdownList: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  dropdownOptionSelected: {
+    backgroundColor: '#eef2ff',
+  },
+  dropdownOptionTextSelected: {
+    color: '#4338ca',
+    fontWeight: '700',
+  },
+  disabledSelect: {
+    opacity: 0.55,
   },
   selectGroup: {
     flex: 1,
@@ -283,6 +498,9 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     fontSize: 14,
     fontWeight: '700',
+  },
+  disabledValue: {
+    color: '#94a3b8',
   },
   optionRow: {
     flexDirection: 'row',

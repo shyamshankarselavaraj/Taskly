@@ -1,6 +1,6 @@
-export type TaskCategory = 'Work' | 'Learning' | 'Shopping' | 'Health' | 'Personal';
+export type TaskCategory = string;
 export type TaskPriority = 'High' | 'Medium' | 'Low';
-export type TaskReminder = 0 | 5 | 10 | 30 | 60 | 1440;
+export type TaskReminder = 0 | -1 | 5 | 10 | 30 | 60 | 1440;
 
 export type Task = {
   id: string;

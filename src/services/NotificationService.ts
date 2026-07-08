@@ -18,7 +18,7 @@ export async function requestNotificationPermission() {
 }
 
 export async function scheduleReminder(task: Task) {
-  if (!task.reminder || task.completed || !task.dueDate) return;
+  if (task.reminder === 0 || task.completed || !task.dueDate) return;
 
   try {
     await ensureChannel();
@@ -28,7 +28,8 @@ export async function scheduleReminder(task: Task) {
       ? task.dueTime.split(':').map(Number)
       : [9, 0];
 
-    const triggerTime = new Date(year, month - 1, day, hour, minute).getTime() - task.reminder * 60 * 1000;
+    const minutesBefore = task.reminder === -1 ? 0 : task.reminder;
+    const triggerTime = new Date(year, month - 1, day, hour, minute).getTime() - minutesBefore * 60 * 1000;
 
     if (triggerTime <= Date.now()) return;
 
